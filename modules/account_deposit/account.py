@@ -1,0 +1,65 @@
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
+from trytond.model import fields
+from trytond.pool import PoolMeta
+from trytond.pyson import Eval, If
+
+
+def AccountTypeMixin(template=False):
+
+    class Mixin:
+        __slots__ = ()
+        deposit = fields.Boolean(
+            "Deposit",
+            domain=[
+                If(~Eval('statement').in_(['off-balance', 'balance']),
+                    ('deposit', '=', False), ()),
+                ],
+            states={
+                'invisible': ~Eval('statement').in_(
+                    ['off-balance', 'balance']),
+                })
+    if not template:
+        for fname in dir(Mixin):
+            field = getattr(Mixin, fname)
+            if not isinstance(field, fields.Field):
+                continue
+            field.states['editable'] = (
+                ~Eval('template', None) | Eval('template_override', False))
+    return Mixin
+
+
+class AccountTypeTemplate(AccountTypeMixin(template=True), metaclass=PoolMeta):
+    __name__ = 'account.account.type.template'
+
+    def _get_type_value(self, type=None):
+        values = super()._get_type_value(type=type)
+        if not type or type.deposit != self.deposit:
+            values['deposit'] = self.deposit
+        return values
+
+
+class AccountType(AccountTypeMixin(), metaclass=PoolMeta):
+    __name__ = 'account.account.type'
+
+
+class Reconcile(metaclass=PoolMeta):
+    __name__ = 'account.reconcile'
+
+    @classmethod
+    def currencies_to_reconcile(cls, account, party, _balanced=False):
+        if account.type.deposit:
+            _balanced = True
+        return super().currencies_to_reconcile(
+            account, party, _balanced=_balanced)
+
+
+class Payment(metaclass=PoolMeta):
+    __name__ = 'account.payment'
+
+    @classmethod
+    def _account_type_domain(cls):
+        return ['OR',
+            super()._account_type_domain(),
+            ('type.deposit', '=', True),
+            ]

@@ -1,0 +1,12 @@
+{
+    "module_name": "my_module",
+    "prefix": "",
+    "package_name": "{% if not cookiecutter.prefix %}trytond_{{ cookiecutter.module_name }}{% else %}{{ cookiecutter.prefix }}_{{ cookiecutter.module_name }}{% endif %}",
+    "version": "{{ version }}",
+    "description": "",
+    "author": "",
+    "author_email": "",
+    "keywords": "",
+    "test_with_scenario": "",
+    "_extensions": ["extensions.Version"]
+}

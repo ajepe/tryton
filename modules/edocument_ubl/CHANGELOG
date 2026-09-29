@@ -1,0 +1,19 @@
+
+Version 8.0.0 - 2026-04-20
+--------------------------
+* Bug fixes (see mercurial logs for details)
+* Render prepaid amount
+* Fill invoice source amounts instead of checking amounts
+* Filter the MIME type of the additional documents allowed by the specification
+* Use VATEX as tax exemption reason code
+* Add support for Python 3.14
+* Remove support for Python 3.9
+* Fill payment means
+* Render payment means
+* Set BillingReference to Invoice and Credit Note
+* Render allowance and charge
+* Fill buyer's item identification
+
+Version 7.8.0 - 2025-12-15
+--------------------------
+Initial release

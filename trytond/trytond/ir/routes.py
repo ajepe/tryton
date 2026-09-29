@@ -1,0 +1,431 @@
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
+import csv
+import datetime as dt
+import hashlib
+import io
+import json
+import os.path
+from numbers import Number
+
+import trytond.config as config
+from trytond.i18n import gettext
+from trytond.protocols.jsonrpc import JSONDecoder
+from trytond.protocols.wrappers import (
+    HTTPStatus, Response, abort, redirect, with_pool, with_transaction)
+from trytond.routing import Route, Router, Rule
+from trytond.tools import file_open, find_path, slugify
+from trytond.transaction import Transaction
+from trytond.wsgi import app
+
+
+def get_token(record):
+    return str(record.last_modified_at.timestamp())
+
+
+def get_config(names, section='html', default=None):
+    names = names[:]
+    while names:
+        value = config.get(section, '-'.join(names))
+        if value is not None:
+            return value
+        names = names[:-1]
+    return default
+
+
+TEMPLATE = '''<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <script src="%(source)s" referrerpolicy="origin"></script>
+    <script>
+    tinymce.init({
+        selector: '#text',
+        license_key: '%(license_key)s',
+        promotion: false,
+        language: '%(language)s',
+        plugins: 'autosave code %(plugins)s',
+        removed_menuitems: 'newdocument',
+        toolbar: 'save | undo redo | styleselect | bold italic | ' +
+            'alignleft aligncenter alignright alignjustify | ' +
+            'bullist numlist outdent indent | link image | close',
+        extended_valid_elements:
+            'py\\\\:if[test],' +
+            'py\\\\:choose[test],py\\\\:when[test],py\\\\:otherwise,' +
+            'py\\\\:for[each],' +
+            'py\\\\:def[function],' +
+            'py\\\\:match[path],' +
+            'py\\\\:with[vars],' +
+            'py\\\\:replace[value]',
+        custom_elements:
+            'py\\\\:if,' +
+            'py\\\\:choose,py\\\\:when,py\\\\:otherwise,' +
+            'py\\\\:for,' +
+            'py\\\\:def,' +
+            'py\\\\:match,' +
+            'py\\\\:with,' +
+            'py\\\\:replace',
+        content_css: %(css)s,
+        body_class: %(class)s,
+        setup: function(editor) {
+            editor.ui.registry.addMenuItem('save', {
+                text: 'Save',
+                icon: 'save',
+                context: 'file',
+                onAction: () => editor.execCommand('save')
+            });
+            editor.ui.registry.addButton('save', {
+                title: 'Save',
+                icon: 'save',
+                onAction: () => editor.execCommand('save')
+            });
+            editor.addShortcut('ctrl+s', 'save', 'save');
+            editor.addCommand('save', function() {
+                document.form.submit();
+            });
+            editor.ui.registry.addButton('close', {
+                title: 'Close',
+                icon: 'close',
+                onAction: function() {
+                    window.location =
+                        window.location.protocol + '//_@' +
+                        window.location.host +
+                        window.location.pathname;
+                    window.close();
+                },
+            });
+        },
+        init_instance_callback: function(editor) {
+            var error = '%(error)s';
+            if (error) {
+                editor.notificationManager.open({
+                    text: error,
+                    type: 'error',
+                });
+            }
+        },
+    });
+    </script>
+    <title>%(title)s</title>
+</head>
+<body>
+    <form name="form" method="post" style="display: block; text-align: center">
+        <textarea id="text" name="text">%(text)s</textarea>
+        <input name="_csrf_token" type="hidden" value="%(csrf_token)s">
+    </form>
+</body>
+</html>'''
+
+
+def etag_for_files(paths, chunk_size=1024 * 1024):
+    digest = hashlib.sha256()
+    content_length = 0
+    for path in paths:
+        content_length += os.path.getsize(find_path(path))
+        with file_open(path) as f:
+            while chunk := f.read(chunk_size):
+                digest.update(chunk)
+    return digest.hexdigest(), content_length
+
+
+class ChainedFiles:
+    def __init__(self, paths, chunk_size=64 * 1014):
+        self.paths = paths
+        self.chunk_size = chunk_size
+        self._files = []
+        self._closed = False
+
+    def __iter__(self):
+        try:
+            for path in self.paths:
+                f = file_open(path)
+                self._files.append(f)
+                try:
+                    while True:
+                        chunk = f.read(self.chunk_size)
+                        if not chunk:
+                            break
+                        yield chunk
+                finally:
+                    self._files.remove(f)
+                    f.close()
+        finally:
+            self.close()
+
+    def close(self):
+        if not self._closed:
+            self._closed = True
+            for f in self._files:
+                f.close()
+            self._files.clear()
+
+
+class Base(Router):
+    __name__ = 'base'
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls.__routes__.update({
+                'custom_js': Route(Rule('/custom.js', methods={'GET'})),
+                'custom_css': Route(Rule('/custom.css', methods={'GET'})),
+                'html_editor': Route(
+                    Rule(
+                        'html/<model>/<int:record>/<field>',
+                        methods={'GET', 'POST'}),
+                    decorators=[
+                        app.auth_required,
+                        with_pool,
+                        with_transaction(
+                            user='request',
+                            context={
+                                '_check_access': True,
+                                'fuzzy_translation': True,
+                                }),
+                        ]),
+                'data': Route(
+                    Rule('data/<model>', methods={'GET'}),
+                    decorators=[
+                        app.auth_required,
+                        with_pool,
+                        with_transaction(
+                            user='request',
+                            context={'_check_access': True},
+                            timeout=config.getint(
+                                'request', 'timeout', default=0)),
+                        ],
+                    ),
+                'old_data': Route(
+                    Rule('/<database_name>/ir/data/<model>', methods={'GET'})),
+                })
+
+    @classmethod
+    def custom_js(cls, request):
+        cache_timeout = config.getint('web', 'cache_timeout')
+        paths = cls.custom_js_files()
+        etag, content_length = etag_for_files(paths)
+        if request.if_none_match and request.if_none_match.contains(etag):
+            response = Response(status=HTTPStatus.NOT_MODIFIED)
+        else:
+            response = Response(
+                ChainedFiles(paths),
+                HTTPStatus.OK,
+                content_type='text/javascript',
+                direct_passthrough=True)
+            response.content_length = content_length
+            response.cache_control.public = True
+            response.cache_control.max_age = cache_timeout
+        response.set_etag(etag)
+        return response
+
+    @classmethod
+    def custom_js_files(cls):
+        """Returns the list of file paths relative to modules
+        to include in custom.js"""
+        return []
+
+    @classmethod
+    def custom_css(cls, request):
+        cache_timeout = config.getint('web', 'cache_timeout')
+        paths = cls.custom_css_files()
+        etag, content_length = etag_for_files(paths)
+        if request.if_none_match and request.if_none_match.contains(etag):
+            response = Response(status=HTTPStatus.NOT_MODIFIED)
+        else:
+            response = Response(
+                ChainedFiles(paths),
+                HTTPStatus.OK,
+                content_type='text/css',
+                direct_passthrough=True)
+            response.content_length = content_length
+            response.cache_control.public = True
+            response.cache_control.max_age = cache_timeout
+        response.set_etag(etag)
+        return response
+
+    @classmethod
+    def custom_css_files(cls):
+        """Returns the list of file paths relative to modules
+        to include in custom.css"""
+        return []
+
+    @classmethod
+    def html_editor(cls, request, pool, model, record, field):
+        Field = pool.get('ir.model.field')
+        field, = Field.search([
+                ('name', '=', field),
+                ('model.name', '=', model),
+                ])
+
+        transaction = Transaction()
+        language = request.args.get('language', transaction.language)
+        with transaction.set_context(language=language):
+            Model = pool.get(model)
+            record = Model(record)
+            values = Model.read([record.id], ['rec_name', field.name])[0]
+
+            status = HTTPStatus.OK
+            error = ''
+            if request.method == 'POST':
+                setattr(record, field.name, request.form['text'])
+                if request.form['_csrf_token'] == get_token(record):
+                    Model.write([record], {field.name: request.form['text']})
+                    return redirect(request.url)
+                else:
+                    status = HTTPStatus.BAD_REQUEST
+                    error = gettext('ir.msg_html_editor_save_fail')
+
+            csrf_token = get_token(record)
+            text = values[field.name] or ''
+            if isinstance(text, bytes):
+                try:
+                    text = text.decode('utf-8')
+                except UnicodeDecodeError as e:
+                    error = str(e).replace("'", "\\'")
+                    text = ''
+            elif not isinstance(text, str):
+                abort(HTTPStatus.BAD_REQUEST)
+            title = '%(model)s "%(name)s" %(field)s - %(title)s' % {
+                'model': field.model_ref.name,
+                'name': values['rec_name'],
+                'field': field.string,
+                'title': request.args.get('title', "Tryton"),
+                }
+            source = config.get(
+                'html', 'src',
+                default='https://cdn.tiny.cloud'
+                '/1/no-api-key/tinymce/7/tinymce.min.js')
+            license_key = config.get('html', 'license_key', default='gpl')
+            return Response(TEMPLATE % {
+                    'source': source,
+                    'license_key': license_key,
+                    'plugins': get_config(
+                        ['plugins', model, field.name], default=''),
+                    'css': get_config(
+                        ['css', model, field.name], default='[]'),
+                    'class': get_config(
+                        ['class', model, field.name], default="''"),
+                    'language': transaction.language,
+                    'title': title,
+                    'text': text,
+                    'csrf_token': csrf_token,
+                    'error': error,
+                    }, status, content_type='text/html')
+
+    @classmethod
+    def data(cls, request, pool, model):
+        User = pool.get('res.user')
+        Lang = pool.get('ir.lang')
+        try:
+            Model = pool.get(model)
+        except KeyError:
+            abort(HTTPStatus.NOT_FOUND)
+        transaction = Transaction()
+        context = User(transaction.user).get_preferences(context_only=True)
+        language = request.args.get('l')
+        if language:
+            context['language'] = language
+        try:
+            domain = json.loads(
+                request.args.get('d', '[]'), object_hook=JSONDecoder())
+        except json.JSONDecodeError:
+            abort(HTTPStatus.BAD_REQUEST)
+        try:
+            ctx = json.loads(
+                request.args.get('c', '{}'), object_hook=JSONDecoder())
+        except json.JSONDecoder:
+            abort(HTTPStatus.BAD_REQUEST)
+        for key in list(ctx.keys()):
+            if key.startswith('_') and key != '_datetime':
+                del ctx[key]
+        context.update(ctx)
+        limit = None
+        offset = 0
+        if 's' in request.args:
+            try:
+                limit = int(request.args.get('s'))
+                if 'p' in request.args:
+                    offset = int(request.args.get('p')) * limit
+            except ValueError:
+                abort(HTTPStatus.BAD_REQUEST)
+        if 'o' in request.args:
+            order = [(o.split(',', 1) + [''])[:2]
+                for o in request.args.getlist('o')]
+        else:
+            order = None
+        fields_names = request.args.getlist('f')
+        encoding = request.args.get('enc', 'UTF-8')
+        delimiter = request.args.get('dl', ',')
+        quotechar = request.args.get('qc', '"')
+        try:
+            header = bool(int(request.args.get('h', True)))
+            locale_format = bool(int(request.args.get('loc', False)))
+        except ValueError:
+            abort(HTTPStatus.BAD_REQUEST)
+
+        with transaction.set_context(**context):
+            lang = Lang.get(transaction.language)
+
+            def format_(row):
+                for i, value in enumerate(row):
+                    if locale_format:
+                        if isinstance(value, Number):
+                            value = lang.format('%.12g', value)
+                        elif isinstance(value, (dt.date, dt.datetime)):
+                            value = lang.strftime(value)
+                    elif isinstance(value, bool):
+                        value = int(value)
+                    row[i] = value
+                return row
+
+            try:
+                if domain and isinstance(domain[0], (int, float)):
+                    rows = Model.export_data(
+                        Model.browse(domain), fields_names, header)
+                else:
+                    rows = Model.export_data_domain(
+                        domain, fields_names,
+                        limit=limit, offset=offset, order=order, header=header)
+            except (ValueError, KeyError):
+                abort(HTTPStatus.BAD_REQUEST)
+            data = io.StringIO(newline='')
+            writer = csv.writer(data, delimiter=delimiter, quotechar=quotechar)
+            for row in rows:
+                writer.writerow(format_(row))
+            data = data.getvalue().encode(encoding)
+            filename = slugify(Model.__names__()['model']) + '.csv'
+            filename = filename.encode('latin-1', 'ignore')
+            response = Response(data, mimetype='text/csv; charset=' + encoding)
+            response.headers.add(
+                'Content-Disposition', 'attachment', filename=filename)
+            return response
+
+    @classmethod
+    def old_data(cls, request, database_name, model):
+        url = cls.url_for('data', model=model, _request=request.context)
+        url += f'?{request.environ["QUERY_STRING"]}'
+        return redirect(url)
+
+
+@app.route('/avatar/<base64:database_name>/<uuid>', methods={'GET'})
+@with_pool
+@with_transaction()
+def avatar(request, pool, uuid):
+    Avatar = pool.get('ir.avatar')
+
+    try:
+        avatar, = Avatar.search([
+                ('uuid', '=', uuid),
+                ])
+    except ValueError:
+        abort(HTTPStatus.NOT_FOUND)
+    try:
+        size = int(request.args.get('s', 64))
+    except ValueError:
+        abort(HTTPStatus.BAD_REQUEST)
+    response = Response(avatar.get(size), mimetype='image/jpeg')
+    response.headers['Cache-Control'] = (
+        'max-age=%s, public' % config.getint(
+            'web', 'avatar_timeout', default=7 * 24 * 60 * 60))
+    response.add_etag()
+    return response

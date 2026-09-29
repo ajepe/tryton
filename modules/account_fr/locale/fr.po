@@ -1,0 +1,214 @@
+#
+msgid ""
+msgstr "Content-Type: text/plain; charset=utf-8\n"
+
+msgctxt "field:account.fr.fec.result,file:"
+msgid "File"
+msgstr "Fichier"
+
+msgctxt "field:account.fr.fec.result,filename:"
+msgid "File Name"
+msgstr "Nom du fichier"
+
+msgctxt "field:account.fr.fec.start,deferral_period:"
+msgid "Deferral Period"
+msgstr "Période de report"
+
+msgctxt "field:account.fr.fec.start,fiscalyear:"
+msgid "Fiscal Year"
+msgstr "Année fiscale"
+
+msgctxt "field:account.fr.fec.start,type:"
+msgid "Type"
+msgstr "Type"
+
+msgctxt "help:account.fr.fec.start,deferral_period:"
+msgid ""
+"The period to exclude which contains the moves to balance non-deferral "
+"account"
+msgstr ""
+"La période à exclure qui contient les mouvements d'équilibre des comptes de "
+"non-report"
+
+msgctxt "model:account.fr.fec.result,string:"
+msgid "Account Fr Fec Result"
+msgstr "Résultat comptable Français FEC"
+
+msgctxt "model:account.fr.fec.start,string:"
+msgid "Account Fr Fec Start"
+msgstr "Comptes FR FEC Début"
+
+msgctxt "model:ir.action,name:act_fec"
+msgid "Generate FEC"
+msgstr "Générer FEC"
+
+msgctxt "model:ir.ui.menu,name:menu_fec"
+msgid "Generate FEC"
+msgstr "Générer FEC"
+
+msgctxt "selection:account.fr.fec.start,type:"
+msgid "IS-BIC"
+msgstr "IS-BIC"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 1 of article 261 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261, paragraphe 1, du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 1. of article 261 C of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu du point 1 de l'article 261 C du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 1. of article 261 D of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu du point 1 de l'article 261 D du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 1. of article 261 E of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu du point 1 de l'article 261 E du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 1.bis of article 261 D of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu du paragraphe 1.bis de l'article 261 D du Code général des "
+"impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 2 of article 261 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261, paragraphe 2, du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 2 of article 283 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 283, paragraphe 2, du Code général des impôts "
+"(CGI)."
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 2. of article 261 C of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu du point 2 de l'article 261 C du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 2. of article 261 D of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu du point 2 de l'article 261 D du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 2. of article 261 E of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu du point 2 de l'article 261 E du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 3 of article 261 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261, paragraphe 3, du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 3. of article 261 C of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261 C, paragraphe 3, du Code général des "
+"impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 3. of article 261 D of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261 D, paragraphe 3, du Code général des "
+"impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 4 of article 261 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261, paragraphe 4, du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 4. of article 261 D of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261 D, paragraphe 4, du Code général des "
+"impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 5 of article 261 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261, paragraphe 5, du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 7 of article 261 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261, paragraphe 7, du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on 8 of article 261 of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 261, paragraphe 8, du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on article 153 of Council Directive 2006/112/EC"
+msgstr ""
+"Exempté en vertu de l'article 153 de la directive 2006/112/CE du Conseil"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on article 261 A of the General tax code (CGI)"
+msgstr "Exonéré en vertu de l'article 261 A du Code général des impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on article 261 B of the General tax code (CGI)"
+msgstr "Exonéré en vertu de l'article 261 B du Code général des impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on article 275 of the General tax code (CGI)"
+msgstr "Exonéré en vertu de l'article 275 du Code général des impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on article 277 A of the General tax code (CGI)"
+msgstr "Exonéré en vertu de l'article 277 A du Code général des impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on article 295 of the General tax code (CGI)"
+msgstr "Exonéré en vertu de l'article 295 du Code général des impôts (CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "Exempt based on article 298 sexdecies A of the General tax code (CGI)"
+msgstr ""
+"Exonéré en vertu de l'article 298 sexdecies A du Code général des impôts "
+"(CGI)"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid ""
+"France domestic Credit Notes without VAT, due to supplier forfeit of VAT for"
+" discount"
+msgstr ""
+"Avoirs français hors TVA, suite à la perte de TVA par le fournisseur pour "
+"remise"
+
+msgctxt "selection:account.tax,vatex_code:"
+msgid "France domestic VAT franchise in base"
+msgstr "Franchise de TVA intérieure française en base"
+
+msgctxt "wizard_button:account.fr.fec,result,end:"
+msgid "Close"
+msgstr "Fermer"
+
+msgctxt "wizard_button:account.fr.fec,start,end:"
+msgid "Cancel"
+msgstr "Annuler"
+
+msgctxt "wizard_button:account.fr.fec,start,generate:"
+msgid "Generate"
+msgstr "Générer"

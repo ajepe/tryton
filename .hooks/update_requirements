@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
+
+import importlib.metadata
+import io
+import json
+import os
+import subprocess
+from multiprocessing.dummy import Pool
+
+from packaging.requirements import Requirement
+
+root = os.path.dirname(os.path.dirname(__file__))
+module_path = os.path.join(root, 'modules')
+
+dependencies = set()
+build_dependencies = {
+    'rnc2rng',
+    'Babel',
+    'hatchling',
+    'hatch-tryton',
+    }
+development_dependencies = build_dependencies | {
+    'Sphinx',
+    'cookiecutter',
+    'sphinx-lint',
+    'tox',
+    }
+
+FNULL = open(os.devnull, 'w')
+
+_build_deps_installed = True
+try:
+    for requirement in build_dependencies:
+        importlib.metadata.version(Requirement(requirement).name)
+except importlib.metadata.PackageNotFoundError:
+    _build_deps_installed = False
+
+
+def add_dependencies(package):
+    cmd = 'python3 -m build -qq --metadata'
+    if _build_deps_installed:
+        cmd += ' --no-isolation'
+    metadata = subprocess.check_output(
+        cmd, shell=True, encoding='utf-8', cwd=package).strip()
+    metadata = json.loads(metadata)
+    for requirement in metadata.get('requires_dist', []):
+        requirement = Requirement(requirement)
+        if (requirement.name.startswith('trytond')
+                or requirement.name in {'proteus', 'tryton'}):
+            continue
+        development = bool(requirement.marker)
+        requirement.marker = None
+        if development:
+            development_dependencies.add(requirement)
+        else:
+            dependencies.add(requirement)
+
+
+pool = Pool()
+pool.apply_async(add_dependencies, (os.path.join(root, 'trytond'),))
+pool.apply_async(add_dependencies, (os.path.join(root, 'tryton'),))
+pool.apply_async(add_dependencies, (os.path.join(root, 'proteus'),))
+pool.apply_async(add_dependencies, (os.path.join(root, 'trytond-gis'),))
+
+for module in os.listdir(module_path):
+    path = os.path.join(module_path, module)
+    if not os.path.isdir(path):
+        continue
+    pool.apply_async(add_dependencies, (path,))
+
+pool.close()
+pool.join()
+
+with io.open(os.path.join(root, 'requirements.txt'), 'w') as fp:
+    fp.writelines(map(lambda d: d + '\n', sorted(map(str, dependencies))))
+
+with io.open(os.path.join(root, 'requirements-dev.txt'), 'w') as fp:
+    fp.writelines(
+        map(lambda d: d + '\n', sorted(map(str, development_dependencies))))

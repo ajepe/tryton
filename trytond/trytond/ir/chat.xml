@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<tryton>
+    <data>
+        <record model="ir.ui.view" id="chat_channel_view_list">
+            <field name="model">ir.chat.channel</field>
+            <field name="type">tree</field>
+            <field name="name">chat_channel_list</field>
+        </record>
+
+        <record model="ir.ui.view" id="chat_channel_view_form">
+            <field name="model">ir.chat.channel</field>
+            <field name="type">form</field>
+            <field name="name">chat_channel_form</field>
+        </record>
+
+        <record model="ir.action.act_window" id="act_chat_channel">
+            <field name="name">Channels</field>
+            <field name="res_model">ir.chat.channel</field>
+        </record>
+        <record model="ir.action.act_window.view" id="act_chat_channel_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="chat_channel_view_list"/>
+            <field name="act_window" ref="act_chat_channel"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_chat_channel_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="chat_channel_view_form"/>
+            <field name="act_window" ref="act_chat_channel"/>
+        </record>
+        <menuitem parent="ir.menu_models" action="act_chat_channel" id="menu_chat_channel_form"/>
+
+        <record model="ir.model.button" id="chat_channel_reset_identifier_button">
+            <field name="name">reset_identifier</field>
+            <field name="string">Reset Identifier</field>
+            <field name="model">ir.chat.channel</field>
+            <field name="confirm">This action will make previous entry point unusable. Do you want to continue?</field>
+        </record>
+
+        <record model="ir.model.access" id="access_chat_channel">
+            <field name="model">ir.chat.channel</field>
+            <field name="perm_read" eval="False"/>
+            <field name="perm_write" eval="False"/>
+            <field name="perm_create" eval="False"/>
+            <field name="perm_delete" eval="False"/>
+        </record>
+
+        <record model="ir.ui.view" id="chat_follower_view_list">
+            <field name="model">ir.chat.follower</field>
+            <field name="type">tree</field>
+            <field name="name">chat_follower_list</field>
+        </record>
+
+        <record model="ir.ui.view" id="chat_follower_view_form">
+            <field name="model">ir.chat.follower</field>
+            <field name="type">form</field>
+            <field name="name">chat_follower_form</field>
+        </record>
+
+        <record model="ir.ui.view" id="chat_message_view_list">
+            <field name="model">ir.chat.message</field>
+            <field name="type">tree</field>
+            <field name="name">chat_message_list</field>
+        </record>
+
+        <record model="ir.ui.view" id="chat_message_view_form">
+            <field name="model">ir.chat.message</field>
+            <field name="type">form</field>
+            <field name="name">chat_message_form</field>
+        </record>
+
+        <record model="ir.action.act_window" id="act_chat_message">
+            <field name="name">Messages</field>
+            <field name="res_model">ir.chat.message</field>
+            <field
+                name="domain"
+                eval="[('channel', 'in', Eval('active_ids', []))]"
+                pyson="1"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_chat_message_view1">
+            <field name="sequence" eval="10"/>
+            <field name="view" ref="chat_message_view_list"/>
+            <field name="act_window" ref="act_chat_message"/>
+        </record>
+        <record model="ir.action.act_window.view" id="act_chat_message_view2">
+            <field name="sequence" eval="20"/>
+            <field name="view" ref="chat_message_view_form"/>
+            <field name="act_window" ref="act_chat_message"/>
+        </record>
+        <record model="ir.action.keyword" id="act_chat_message_keyword1">
+            <field name="keyword">form_relate</field>
+            <field name="model">ir.chat.channel,-1</field>
+            <field name="action" ref="act_chat_message"/>
+        </record>
+    </data>
+</tryton>

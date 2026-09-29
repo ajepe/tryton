@@ -1,0 +1,23 @@
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
+from trytond.exceptions import UserWarning
+
+
+class CostWarning(UserWarning):
+    pass
+
+
+class ToleranceProductionWarning(UserWarning):
+    pass
+
+
+class UnderProductionWarning(ToleranceProductionWarning):
+    pass
+
+
+class OverProductionWarning(ToleranceProductionWarning):
+    pass
+
+
+class UnexpectedProductionWarning(ToleranceProductionWarning):
+    pass

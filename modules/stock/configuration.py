@@ -1,0 +1,285 @@
+# This file is part of Tryton.  The COPYRIGHT file at the top level of
+# this repository contains the full copyright notices and license terms.
+from trytond.model import (
+    ModelSingleton, ModelSQL, ModelView, ValueMixin, fields)
+from trytond.modules.company.model import (
+    CompanyMultiValueMixin, CompanyValueMixin)
+from trytond.pool import Pool
+from trytond.pyson import Eval, Id, TimeDelta
+
+sequences = ['shipment_in_sequence', 'shipment_in_return_sequence',
+    'shipment_out_sequence', 'shipment_out_return_sequence',
+    'shipment_internal_sequence', 'inventory_sequence']
+shipment_internal_transit = fields.Many2One(
+    'stock.location', "Internal Shipment Transit", required=True,
+    domain=[
+        ('type', '=', 'storage'),
+        ('parent', '=', None),
+        ],
+    help="The default location used for stock that is in transit between "
+    "warehouses.")
+inventory_quantity_tolerance = fields.Float(
+    "Inventory Quantity Tolerance", digits=(None, 4),
+    help="The inventory quantity variation accepted in percentage.")
+inventory_cost_thresold = fields.Numeric(
+    "Inventory Cost Thresold",
+    domain=['OR',
+        ('inventory_cost_thresold', '=', None),
+        ('inventory_cost_thresold', '>', 0),
+        ],
+    help="The inventory cost thresold accepted in company currency.")
+
+
+def default_func(field_name):
+    @classmethod
+    def default(cls, **pattern):
+        return getattr(
+            cls.multivalue_model(field_name),
+            'default_%s' % field_name, lambda: None)()
+    return default
+
+
+def default_sequence(name):
+    @classmethod
+    def default(cls):
+        pool = Pool()
+        ModelData = pool.get('ir.model.data')
+        try:
+            return ModelData.get_id('stock', name)
+        except KeyError:
+            return None
+    return default
+
+
+class Configuration(
+        ModelSingleton, ModelSQL, ModelView, CompanyMultiValueMixin):
+    __name__ = 'stock.configuration'
+    shipment_in_sequence = fields.MultiValue(fields.Many2One(
+            'ir.sequence', "Supplier Shipment Sequence", required=True,
+            domain=[
+                ('company', 'in',
+                    [Eval('context', {}).get('company', -1), None]),
+                ('sequence_type', '=',
+                    Id('stock', 'sequence_type_shipment_in')),
+                ],
+            help="Used to generate the number given to supplier shipments."))
+    shipment_in_return_sequence = fields.MultiValue(fields.Many2One(
+            'ir.sequence', "Supplier Return Shipment Sequence", required=True,
+            domain=[
+                ('company', 'in',
+                    [Eval('context', {}).get('company', -1), None]),
+                ('sequence_type', '=',
+                    Id('stock', 'sequence_type_shipment_in_return')),
+                ],
+            help="Used to generate the number given to supplier return "
+            "shipments."))
+    shipment_out_sequence = fields.MultiValue(fields.Many2One(
+            'ir.sequence', "Customer Shipment Sequence", required=True,
+            domain=[
+                ('company', 'in',
+                    [Eval('context', {}).get('company', -1), None]),
+                ('sequence_type', '=',
+                    Id('stock', 'sequence_type_shipment_out')),
+                ],
+            help="Used to generate the number given to customer "
+            "shipments."))
+    shipment_out_return_sequence = fields.MultiValue(fields.Many2One(
+            'ir.sequence', "Customer Return Shipment Sequence", required=True,
+            domain=[
+                ('company', 'in',
+                    [Eval('context', {}).get('company', -1), None]),
+                ('sequence_type', '=',
+                    Id('stock', 'sequence_type_shipment_out_return')),
+                ],
+            help="Used to generate the number given to customer return "
+            "shipments."))
+    shipment_internal_sequence = fields.MultiValue(fields.Many2One(
+            'ir.sequence', "Internal Shipment Sequence", required=True,
+            domain=[
+                ('company', 'in',
+                    [Eval('context', {}).get('company', -1), None]),
+                ('sequence_type', '=',
+                    Id('stock', 'sequence_type_shipment_internal')),
+                ],
+            help="Used to generate the number given to internal "
+            "shipments."))
+    inventory_sequence = fields.MultiValue(fields.Many2One(
+            'ir.sequence', "Inventory Sequence", required=True,
+            domain=[
+                ('company', 'in',
+                    [Eval('context', {}).get('company', -1), None]),
+                ('sequence_type', '=',
+                    Id('stock', 'sequence_type_inventory')),
+                ],
+            help="Used to generate the number given to inventories."))
+    shipment_internal_transit = fields.MultiValue(shipment_internal_transit)
+    inventory_quantity_tolerance = fields.MultiValue(
+        inventory_quantity_tolerance)
+    inventory_cost_thresold = fields.MultiValue(
+        inventory_cost_thresold)
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls.inventory_quantity_tolerance.domain = [
+            'OR',
+            ('inventory_quantity_tolerance', '=', None),
+            [
+                ('inventory_quantity_tolerance', '>=', 0),
+                ('inventory_quantity_tolerance', '<=', 1),
+                ]]
+
+    period_creation_interval = fields.MultiValue(
+        fields.TimeDelta(
+            "Period Creation Interval",
+            domain=['OR',
+                ('period_creation_interval', '=', None),
+                ('period_creation_interval', '>=', TimeDelta(days=1)),
+                ],
+            help="Leave it empty to prevent periods "
+            "from being created automatically."))
+    period_closing_delay = fields.MultiValue(
+        fields.TimeDelta(
+            "Period Closing Delay",
+            domain=['OR',
+                ('period_closing_delay', '=', None),
+                ('period_closing_delay', '>=', TimeDelta()),
+                ],
+            help="Leave it empty to prevent periods "
+            "from being closed automatically."))
+
+    @classmethod
+    def multivalue_model(cls, field):
+        pool = Pool()
+        if field in sequences:
+            return pool.get('stock.configuration.sequence')
+        if field == 'shipment_internal_transit':
+            return pool.get('stock.configuration.location')
+        if field in {'period_creation_interval', 'period_closing_delay'}:
+            return pool.get('stock.configuration.period')
+        if field in {
+                'inventory_quantity_tolerance',
+                'inventory_cost_thresold',
+                }:
+            return pool.get('stock.configuration.inventory')
+        return super().multivalue_model(field)
+
+    default_shipment_in_sequence = default_func('shipment_in_sequence')
+    default_shipment_in_return_sequence = default_func(
+        'shipment_in_return_sequence')
+    default_shipment_out_sequence = default_func('shipment_out_sequence')
+    default_shipment_out_return_sequence = default_func(
+        'shipment_out_return_sequence')
+    default_shipment_internal_sequence = default_func(
+        'shipment_internal_sequence')
+    default_inventory_sequence = default_func('inventory_sequence')
+    default_shipment_internal_transit = default_func(
+        'shipment_internal_transit')
+    default_inventory_quantity_tolerance = default_func(
+        'inventory_quantity_tolerance')
+    default_inventory_cost_thresold = default_func(
+        'inventory_cost_thresold')
+
+
+class ConfigurationSequence(ModelSQL, CompanyValueMixin):
+    __name__ = 'stock.configuration.sequence'
+    shipment_in_sequence = fields.Many2One(
+        'ir.sequence', "Supplier Shipment Sequence", required=True,
+        domain=[
+            ('company', 'in', [Eval('company', -1), None]),
+            ('sequence_type', '=',
+                Id('stock', 'sequence_type_shipment_in')),
+            ])
+    shipment_in_return_sequence = fields.Many2One(
+        'ir.sequence', "Supplier Return Shipment Sequence", required=True,
+        domain=[
+            ('company', 'in', [Eval('company', -1), None]),
+            ('sequence_type', '=',
+                Id('stock', 'sequence_type_shipment_in_return')),
+            ])
+    shipment_out_sequence = fields.Many2One(
+        'ir.sequence', "Customer Shipment Sequence", required=True,
+        domain=[
+            ('company', 'in', [Eval('company', -1), None]),
+            ('sequence_type', '=',
+                Id('stock', 'sequence_type_shipment_out')),
+            ])
+    shipment_out_return_sequence = fields.Many2One(
+        'ir.sequence', "Customer Return Shipment Sequence", required=True,
+        domain=[
+            ('company', 'in', [Eval('company', -1), None]),
+            ('sequence_type', '=',
+                Id('stock', 'sequence_type_shipment_out_return')),
+            ])
+    shipment_internal_sequence = fields.Many2One(
+        'ir.sequence', "Internal Shipment Sequence", required=True,
+        domain=[
+            ('company', 'in', [Eval('company', -1), None]),
+            ('sequence_type', '=',
+                Id('stock', 'sequence_type_shipment_internal')),
+            ])
+    inventory_sequence = fields.Many2One(
+        'ir.sequence', "Inventory Sequence", required=True,
+        domain=[
+            ('company', 'in', [Eval('company', -1), None]),
+            ('sequence_type', '=',
+                Id('stock', 'sequence_type_inventory')),
+            ])
+
+    default_shipment_in_sequence = default_sequence('sequence_shipment_in')
+    default_shipment_in_return_sequence = default_sequence(
+        'sequence_shipment_in_return')
+    default_shipment_out_sequence = default_sequence('sequence_shipment_out')
+    default_shipment_out_return_sequence = default_sequence(
+        'sequence_shipment_out_return')
+    default_shipment_internal_sequence = default_sequence(
+        'sequence_shipment_internal')
+    default_inventory_sequence = default_sequence('sequence_inventory')
+
+
+class ConfigurationLocation(ModelSQL, ValueMixin):
+    __name__ = 'stock.configuration.location'
+    shipment_internal_transit = shipment_internal_transit
+
+    @classmethod
+    def default_shipment_internal_transit(cls):
+        pool = Pool()
+        ModelData = pool.get('ir.model.data')
+        try:
+            return ModelData.get_id('stock', 'location_transit')
+        except KeyError:
+            return None
+
+
+class Period(ModelSQL, CompanyValueMixin):
+    __name__ = 'stock.configuration.period'
+
+    period_creation_interval = fields.TimeDelta(
+        "Period Creation Interval",
+        domain=['OR',
+            ('period_creation_interval', '=', None),
+            ('period_creation_interval', '>=', TimeDelta(days=1)),
+            ])
+    period_closing_delay = fields.TimeDelta(
+        "Period Closing Delay",
+        domain=['OR',
+            ('period_closing_delay', '=', None),
+            ('period_closing_delay', '>=', TimeDelta()),
+            ])
+
+
+class ConfigurationInventory(ModelSQL, ValueMixin):
+    __name__ = 'stock.configuration.inventory'
+    inventory_quantity_tolerance = inventory_quantity_tolerance
+    inventory_cost_thresold = inventory_cost_thresold
+
+    @classmethod
+    def __setup__(cls):
+        super().__setup__()
+        cls.inventory_quantity_tolerance.domain = ['OR',
+            ('inventory_quantity_tolerance', '=', None),
+            [
+                ('inventory_quantity_tolerance', '>=', 0),
+                ('inventory_quantity_tolerance', '<=', 1),
+                ],
+            ]

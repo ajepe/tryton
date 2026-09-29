@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+PACKAGES=`realpath "${1}"`
+mkdir -p "${PACKAGES}"
+
+(find . -name 'cookiecutter*' -prune -o -name pyproject.toml -print | while read path; do
+    echo "`dirname ${path}`"
+done) | xargs --max-procs=$(( `nproc` * 2)) -I '{}' sh -c "cd \"{}\" && python3 -m build --no-isolation --wheel --quiet --outdir \"${PACKAGES}\""

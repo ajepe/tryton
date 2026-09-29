@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!-- This file is part of Tryton.  The COPYRIGHT file at the top level of
+this repository contains the full copyright notices and license terms. -->
+<form>
+    <label name="name"/>
+    <field name="name"/>
+    <group colspan="2" col="-1" id="code">
+        <label name="code"/>
+        <field name="code"/>
+        <label name="version"/>
+        <field name="version"/>
+    </group>
+
+    <label name="mode"/>
+    <field name="mode"/>
+    <label name="carrier"/>
+    <field name="carrier"/>
+
+    <label name="export_duties"/>
+    <field name="export_duties"/>
+    <label name="import_duties"/>
+    <field name="import_duties"/>
+
+    <label name="risk"/>
+    <field name="risk"/>
+    <label name="location"/>
+    <field name="location"/>
+
+    <field name="companies" colspan="4"/>
+</form>
