@@ -1,0 +1,6 @@
+{
+  "name": "server version",
+  "method": "common.server.version",
+  "params": [],
+  "skip": true
+}

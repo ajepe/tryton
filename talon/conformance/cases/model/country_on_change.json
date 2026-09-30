@@ -1,0 +1,5 @@
+{
+  "name": "country on_change code",
+  "method": "model.country.country.on_change",
+  "params": [{"code": "us"}, ["code"], {}]
+}

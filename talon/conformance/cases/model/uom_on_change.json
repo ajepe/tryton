@@ -1,0 +1,5 @@
+{
+  "name": "uom on_change factor",
+  "method": "model.product.uom.on_change",
+  "params": [{"factor": 2}, ["factor"], {}]
+}

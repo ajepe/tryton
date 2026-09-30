@@ -1,0 +1,14 @@
+[
+  {
+    "name": "party search_read by code",
+    "method": "model.party.party.search_read",
+    "params": [[["code", "=", "CONF-ACME"]], 0, 10, [["name", "ASC"]], ["name", "code", "active"], {}],
+    "ignore": ["id"],
+    "sort_lists": true
+  },
+  {
+    "name": "party search_count",
+    "method": "model.party.party.search_count",
+    "params": [[["code", "in", ["CONF-ACME", "CONF-GLBX"]]], {}]
+  }
+]

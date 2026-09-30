@@ -1,0 +1,5 @@
+{
+  "name": "logout",
+  "method": "common.db.logout",
+  "params": []
+}

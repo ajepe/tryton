@@ -1,0 +1,13 @@
+{
+  "name": "basic parties",
+  "setup": [
+    {
+      "method": "model.party.party.create",
+      "params": [[{"name": "Conformance Acme", "code": "CONF-ACME"}], {}]
+    },
+    {
+      "method": "model.party.party.create",
+      "params": [[{"name": "Conformance Globex", "code": "CONF-GLBX"}], {}]
+    }
+  ]
+}

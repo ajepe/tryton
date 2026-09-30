@@ -1,0 +1,17 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "tryton-desktop",
+  "outputfilename": "tryton-desktop",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "",
+  "author": {
+    "name": "Talon"
+  },
+  "info": {
+    "productName": "Tryton Desktop",
+    "productVersion": "0.1.0",
+    "comments": "Talon desktop client"
+  }
+}
